@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Catatan Sederhana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .note-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .note-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #4f46e5;
+            color: white;
+            z-index: 100;
+            transition: opacity 0.5s ease-out;
+        }
+        #splash-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8 flex items-center justify-center min-h-screen">
+
+    <div id="splash-screen">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mb-4 text-white animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <path d="M14 2v6h6"></path>
+            <path d="M9 12h6"></path>
+            <path d="M9 16h6"></path>
+            <path d="M11 20h2"></path>
+        </svg>
+        <h1 class="text-4xl font-bold">Catatanku</h1>
+        <p class="mt-2 text-lg">Membuat catatan jadi lebih mudah</p>
+    </div>
+
+    <div id="main-content" class="container mx-auto max-w-4xl bg-white shadow-lg rounded-xl p-8 hidden">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Aplikasi Catatan</h1>
+
+        <div class="bg-gray-50 p-6 rounded-lg mb-8 shadow-sm">
+            <h2 id="form-title" class="text-2xl font-semibold text-gray-700 mb-4">Tambah Catatan Baru</h2>
+            <form id="note-form" class="space-y-4">
+                <div>
+                    <input type="hidden" id="note-id">
+                    <label for="note-title" class="block text-sm font-medium text-gray-700">Judul Catatan</label>
+                    <input type="text" id="note-title" placeholder="Judul..." required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3">
+                </div>
+                <div>
+                    <label for="note-content" class="block text-sm font-medium text-gray-700">Isi Catatan</label>
+                    <textarea id="note-content" rows="4" placeholder="Tuliskan catatan Anda di sini..." required
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3"></textarea>
+                </div>
+                <div class="flex space-x-4">
+                    <button type="submit" id="submit-btn" class="flex-1 py-3 px-6 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Simpan Catatan
+                    </button>
+                    <button type="button" id="cancel-btn" class="flex-1 py-3 px-6 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 hidden">
+                        Batal
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="notes-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+
+        <div id="empty-message" class="text-center text-gray-500 py-10 hidden">
+            <p class="text-lg">Belum ada catatan. Tambahkan yang pertama!</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const splashScreen = document.getElementById('splash-screen');
+            const mainContent = document.getElementById('main-content');
+            
+            // Tampilkan splash screen selama 2 detik, lalu sembunyikan
+            setTimeout(() => {
+                splashScreen.classList.add('fade-out');
+                // Sembunyikan splash screen sepenuhnya setelah animasi selesai
+                setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                    mainContent.classList.remove('hidden');
+                }, 500); // Durasi transisi
+            }, 2000); // Durasi tampilan splash screen (2 detik)
+
+            // Dapatkan elemen-elemen DOM
+            const noteForm = document.getElementById('note-form');
+            const noteIdInput = document.getElementById('note-id');
+            const noteTitleInput = document.getElementById('note-title');
+            const noteContentTextarea = document.getElementById('note-content');
+            const notesList = document.getElementById('notes-list');
+            const formTitle = document.getElementById('form-title');
+            const submitBtn = document.getElementById('submit-btn');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const emptyMessage = document.getElementById('empty-message');
+
+            // Fungsi untuk memuat catatan dari localStorage
+            function loadNotes() {
+                const notes = JSON.parse(localStorage.getItem('notes')) || [];
+                notesList.innerHTML = '';
+                if (notes.length === 0) {
+                    emptyMessage.classList.remove('hidden');
+                } else {
+                    emptyMessage.classList.add('hidden');
+                    notes.forEach(note => {
+                        const noteCard = createNoteCard(note);
+                        notesList.appendChild(noteCard);
+                    });
+                }
+            }
+
+            // Fungsi untuk membuat elemen kartu catatan
+            function createNoteCard(note) {
+                const noteCard = document.createElement('div');
+                noteCard.className = 'note-card bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col justify-between animate-fade-in';
+                noteCard.innerHTML = `
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">${note.title}</h3>
+                        <p class="text-gray-700 leading-relaxed break-words">${note.content.substring(0, 150)}...</p>
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button class="edit-btn py-2 px-4 bg-yellow-400 text-gray-800 font-semibold rounded-lg shadow-sm hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2">
+                            Edit
+                        </button>
+                        <button class="delete-btn py-2 px-4 bg-red-500 text-white font-semibold rounded-lg shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                            Hapus
+                        </button>
+                    </div>
+                `;
+
+                // Tambahkan event listener untuk tombol Edit
+                noteCard.querySelector('.edit-btn').addEventListener('click', () => editNote(note));
+                
+                // Tambahkan event listener untuk tombol Hapus
+                noteCard.querySelector('.delete-btn').addEventListener('click', () => deleteNote(note.id));
+
+                return noteCard;
+            }
+
+            // Fungsi untuk menambahkan atau mengedit catatan
+            noteForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = noteIdInput.value;
+                const title = noteTitleInput.value;
+                const content = noteContentTextarea.value;
+                const notes = JSON.parse(localStorage.getItem('notes')) || [];
+
+                if (id) {
+                    // Logika edit catatan
+                    const noteIndex = notes.findIndex(note => note.id === id);
+                    if (noteIndex !== -1) {
+                        notes[noteIndex].title = title;
+                        notes[noteIndex].content = content;
+                    }
+                } else {
+                    // Logika tambah catatan
+                    const newNote = {
+                        id: crypto.randomUUID(), // Menggunakan crypto.randomUUID() untuk ID unik
+                        title: title,
+                        content: content
+                    };
+                    notes.push(newNote);
+                }
+
+                localStorage.setItem('notes', JSON.stringify(notes));
+                noteForm.reset();
+                noteIdInput.value = '';
+                formTitle.textContent = 'Tambah Catatan Baru';
+                submitBtn.textContent = 'Simpan Catatan';
+                cancelBtn.classList.add('hidden');
+                loadNotes();
+            });
+
+            // Fungsi untuk mengedit catatan
+            function editNote(note) {
+                noteIdInput.value = note.id;
+                noteTitleInput.value = note.title;
+                noteContentTextarea.value = note.content;
+                formTitle.textContent = 'Edit Catatan';
+                submitBtn.textContent = 'Perbarui Catatan';
+                cancelBtn.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            // Fungsi untuk membatalkan pengeditan
+            cancelBtn.addEventListener('click', () => {
+                noteForm.reset();
+                noteIdInput.value = '';
+                formTitle.textContent = 'Tambah Catatan Baru';
+                submitBtn.textContent = 'Simpan Catatan';
+                cancelBtn.classList.add('hidden');
+            });
+
+            // Fungsi untuk menghapus catatan
+            function deleteNote(id) {
+                if (!confirm('Apakah Anda yakin ingin menghapus catatan ini?')) {
+                    return;
+                }
+                let notes = JSON.parse(localStorage.getItem('notes')) || [];
+                notes = notes.filter(note => note.id !== id);
+                localStorage.setItem('notes', JSON.stringify(notes));
+                loadNotes();
+            }
+
+            // Panggil loadNotes saat halaman utama dimuat (setelah splash screen)
+            loadNotes();
+        });
+    </script>
+</body>
+</html>
